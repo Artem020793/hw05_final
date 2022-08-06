@@ -11,6 +11,7 @@ class PostForm(ModelForm):
                       'text': 'Введите текст поста'}
         fields = ['text', 'group', 'image']
 
+
 class CommentForm(ModelForm):
     class Meta:
         model = Comment

@@ -46,6 +46,7 @@ class PostPagesTests(TestCase):
             content=small_gif,
             content_type='image/gif'
         )
+
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
@@ -223,7 +224,8 @@ class CommentsTests(TestCase):
         )
         response = self.guest_client.get(f'/posts/{self.post.id}/')
         self.assertNotContains(response, form_comment_guest)
-        
+
+
 class CacheTests(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -238,6 +240,7 @@ class CacheTests(TestCase):
             text=fake.text(),
             id=1,
         )
+
     def setUp(self):
         self.guest_client = Client()
         self.user = User.objects.create_user(username='Noname')
@@ -254,7 +257,8 @@ class CacheTests(TestCase):
         cache.clear()
         third_stage = self.authorized_client.get(reverse('posts:index'))
         self.assertNotEqual(first_stage.content, third_stage.content)
-        
+
+
 class FollowTests(TestCase):
     def setUp(self):
         self.client_auth_follower = Client()
