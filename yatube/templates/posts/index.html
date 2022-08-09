@@ -1,9 +1,7 @@
 {% extends 'base.html' %}
-{% load cache %}
 {% block title %}Последние обновления на сайте{% endblock %}
 {% block content %}
 {% load thumbnail %}
-{% cache 20 sidebar index_page %}
   <div class="container py-5">
     <h1>Последние обновления на сайте</h1>
     {% include 'posts/includes/switcher.html' %}
@@ -23,7 +21,6 @@
     {% empty %}
       <p>Нет постов</p>
     {% endfor %}
-    {% endcache %}
     {% include 'posts/includes/paginator.html' %}
   </div>
 {% endblock %}

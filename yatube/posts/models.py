@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.conf import settings
 
+from core.models import CreatedModel
 
 User = get_user_model()
 
@@ -22,7 +24,6 @@ class Group(models.Model):
 
 
 class Post(models.Model):
-    RELATED_NAME = 'posts'
     text = models.TextField(
         'Текст поста',
         help_text='Введите текст поста'
@@ -33,14 +34,14 @@ class Post(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name=RELATED_NAME,
+        related_name='posts',
     )
     group = models.ForeignKey(
         Group,
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        related_name=RELATED_NAME,
+        related_name='posts',
     )
     image = models.ImageField(
         'Картинка',
@@ -54,24 +55,32 @@ class Post(models.Model):
         verbose_name_plural = 'Посты'
 
     def __str__(self):
-        return self.text[:15]
+        return self.text[:settings.COUNT_WORD]
 
 
-class Comment(models.Model):
+class Comment(CreatedModel):
     post = models.ForeignKey(
-        Post, on_delete=models.CASCADE,
-        related_name='comments'
+        Post,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Комментируемый пост',
     )
     author = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='comments'
+        User,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Автор',
     )
     text = models.TextField(
         verbose_name='Добавить комментарий',
         help_text='Текст комментария',
     )
-    created = models.DateTimeField('Дата публикации', auto_now_add=True)
 
+    class Meta:
+        ordering = ['-created']
+        verbose_name = 'Комментарий '
+        verbose_name_plural = 'Комментарии'
+        
     def __str__(self):
         return self.text
 

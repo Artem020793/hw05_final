@@ -1,6 +1,8 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.views.decorators.cache import cache_page
+from django.conf import settings
 
 from .forms import PostForm, CommentForm
 from .models import Post, Group, User, Follow
@@ -14,7 +16,7 @@ def get_paginator_obj(request, posts):
     page_obj = paginator.get_page(page_number)
     return page_obj
 
-
+@cache_page(settings.TIME_CACHE)
 def index(request):
     post_list = Post.objects.select_related('author', 'group')
     page_obj = get_paginator_obj(request, post_list)
@@ -37,26 +39,27 @@ def group_posts(request, slug):
 
 def profile(request, username):
     author = get_object_or_404(User, username=username)
-    user_posts = Post.objects.select_related().filter(author=author).all()
-    page_obj = get_paginator_obj(request, user_posts)
-    is_follower = request.user.is_authenticated and (
-        request.user.follower.filter(author=author).exists())
+    post_list = author.posts.select_related('author', 'group')
+    page_obj = get_paginator_obj(request, post_list)
+    following = request.user.is_authenticated and (
+        Follow.objects.filter(
+            user=request.user, author=author).exists())
     context = {
         'author': author,
         'page_obj': page_obj,
-        'following': is_follower
+        'following': following,
     }
     return render(request, 'posts/profile.html', context)
 
 
 def post_detail(request, post_id):
     user_post = get_object_or_404(Post, id=post_id)
-    form = CommentForm(request.GET or None)
+    form = CommentForm(request.POST or None)
     comments = user_post.comments.all()
     context = {
         'user_post': user_post,
         'form': form,
-        'comment': comments,
+        'comments': comments,
     }
     return render(request, 'posts/post_detail.html', context)
 
@@ -77,7 +80,6 @@ def post_create(request):
     context = {
         'form': form
     }
-
     return render(request, 'posts/create_post.html', context)
 
 
@@ -99,7 +101,6 @@ def post_edit(request, post_id):
         'form': form,
         'is_edit': True,
     }
-
     return render(request, 'posts/create_post.html', context)
 
 
@@ -111,7 +112,7 @@ def add_comment(request, post_id):
         comment = form.save(commit=False)
         comment.author = request.user
         comment.post = post
-        comment.save()
+        form.save()
     return redirect('posts:post_detail', post_id=post_id)
 
 
@@ -127,12 +128,10 @@ def follow_index(request):
 
 @login_required
 def profile_follow(request, username):
-    user = request.user
-    author = User.objects.get(username=username)
-    is_follower = Follow.objects.filter(user=user, author=author).exists()
-    if user != author and not is_follower:
-        Follow.objects.create(user=user, author=author)
-    return redirect('posts:profile', author.username)
+    user = get_object_or_404(User, username=username)
+    if user != request.user:
+        Follow.objects.get_or_create(user=request.user, author=user)
+    return redirect('posts:profile', username)
 
 
 @login_required
@@ -140,4 +139,4 @@ def profile_unfollow(request, username):
     author = get_object_or_404(User, username=username)
     Follow.objects.filter(
         user=request.user, author=author).delete()
-    return redirect('posts:profile', username=author)
+    return redirect('posts:profile', username)

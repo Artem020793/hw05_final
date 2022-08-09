@@ -1,7 +1,9 @@
 from http import HTTPStatus
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.core.cache import cache
 
 from faker import Faker
 
@@ -13,30 +15,31 @@ User = get_user_model()
 
 class PostsURLTest(TestCase):
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpTestData(cls):
         cls.user = User.objects.create_user(username='Artem1993')
-        cls.user2 = User.objects.create_user(username='ArtemXXXL')
         cls.group = Group.objects.create(
+            title=fake.text(),
             slug='group-slug',
             description=fake.text(),
         )
         cls.post = Post.objects.create(
             author=cls.user,
+            group=cls.group,
             text=fake.text(),
         )
 
     def setUp(self):
-        self.guest_client = Client()
+        self.user_no_author = User.objects.create_user(
+            username=fake.user_name()
+        )
         self.authorized_client = Client()
-        self.authorized_client_2 = Client()
-        self.authorized_client.force_login(self.user)
-        self.authorized_client_2.force_login(self.user2)
+        self.authorized_client.force_login(self.user_no_author)
+        cache.clear()
 
     def test_urls_status_guest(self):
-        """Проверка статуса на странице для гостя"""
+        """Проверка статуса на странице для гостя."""
         templates_status_chek = {
-            reverse('posts:index'): 200,
+            reverse('posts:index'): HTTPStatus.OK,
             reverse('posts:group_list', kwargs={'slug':
                                                 self.group.slug}):
                                                     HTTPStatus.OK,
@@ -49,18 +52,18 @@ class PostsURLTest(TestCase):
         }
         for url, status in templates_status_chek.items():
             with self.subTest(url=url):
-                response = self.guest_client.get(url)
+                response = self.client.get(url)
                 self.assertEqual(response.status_code, status)
 
     def test_pages_available_authorized_client(self):
-        """Авторизированному пользователю доступна страница /create/"""
+        """Авторизированному пользователю доступна страница /create/."""
         response = self.authorized_client.get(reverse('posts:post_create'))
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_redirect_authorized_client_page_edit(self):
         """Авторизированного пользователя со страницы /edit/
-         переадресовывает на страницу просмотра поста"""
-        response = self.authorized_client_2.get(reverse('posts:post_edit',
+         переадресовывает на страницу просмотра поста."""
+        response = self.authorized_client.get(reverse('posts:post_edit',
                                                         kwargs={'post_id':
                                                                 self.post.id}))
         self.assertRedirects(response, reverse('posts:post_detail',
@@ -68,11 +71,11 @@ class PostsURLTest(TestCase):
                                                        self.post.id}))
 
     def test_pages_available_edit_author(self):
-        """Автору поста доступна страница /edit/"""
+        """Автору поста доступна страница /edit/."""
         self.author_client = Client()
         self.author_client.force_login(self.user)
         response = self.author_client.get(reverse('posts:post_edit',
-                                                  args=[self.post.id]))
+                                                  args=(self.post.id,)))
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_edit_pages_template(self):
@@ -80,7 +83,7 @@ class PostsURLTest(TestCase):
         self.author_client = Client()
         self.author_client.force_login(self.user)
         response = self.author_client.get(reverse('posts:post_edit',
-                                                  args=[self.post.id]))
+                                                  args=(self.post.id,)))
         self.assertTemplateUsed(response, 'posts/create_post.html')
 
     def test_create_pages_template(self):
@@ -90,7 +93,7 @@ class PostsURLTest(TestCase):
 
     def test_create_url_authorized(self):
         """Проверка доступа для авторизованного
-        пользователя к созданию/редактированию поста"""
+        пользователя к созданию/редактированию поста."""
         response = self.authorized_client.get(reverse('posts:post_create'))
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
@@ -116,9 +119,14 @@ class PostsURLTest(TestCase):
         url_posts_edit = reverse('posts:post_edit', args=[self.post.id])
         url_login = reverse('users:login')
         url_create = reverse('posts:post_create')
+        url_comments = reverse('posts:add_comment', args=[self.post.id])
+        url_follow = reverse('posts:profile_follow',
+                         args=[self.user.username],)
         url_redirect = {
             url_posts_edit: f'{url_login}?next={url_posts_edit}',
-            url_create: f'{url_login}?next={url_create}'
+            url_create: f'{url_login}?next={url_create}',
+            url_comments: f'{url_login}?next={url_comments}',
+            url_follow: f'{url_login}?next={url_follow}'
         }
         for url, redirect in url_redirect.items():
             with self.subTest(url=url):
