@@ -104,7 +104,7 @@ class PostPagesTests(TestCase):
         self.assertEqual(test_post.image, self.post.image)
 
     def test_create_and_edit_post_page_show_correct_context(self):
-        """Шаблон create_post и edit_post 
+        """Шаблон create_post и edit_post
         сформирован с правильным контекстом."""
         context = {
             reverse('posts:post_create'),
@@ -233,7 +233,7 @@ class FollowTests(TestCase):
             kwargs={'username': self.user_following.username}))
         follow_exist = Follow.objects.filter(user=self.user_follower,
                                              author=self.user_following
-                                              ).exists()
+        ).exists()
         self.assertTrue(follow_exist)
 
     def test_unfollow(self):
@@ -246,7 +246,7 @@ class FollowTests(TestCase):
             kwargs={'username': self.user_following.username}))
         follow_exist = Follow.objects.filter(user=self.user_following,
                                              author=self.user_follower
-                                              ).exists()
+        ).exists()
         self.assertFalse(follow_exist)
 
     def test_subscription_feed(self):
@@ -266,7 +266,7 @@ class FollowTests(TestCase):
             reverse('posts:follow_index'))
         post_text = response.context["page_obj"][0].text
         self.assertIn('page_obj', response.context)
-        self.assertNotContains(response,
+        self.assertEqual(post_text,
                                self.post.text)
 
     def test_not_follow_user_user(self):
