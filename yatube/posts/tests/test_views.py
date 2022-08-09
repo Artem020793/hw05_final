@@ -104,7 +104,8 @@ class PostPagesTests(TestCase):
         self.assertEqual(test_post.image, self.post.image)
 
     def test_create_and_edit_post_page_show_correct_context(self):
-        """Шаблон create_post и edit_post сформирован с правильным контекстом."""
+        """Шаблон create_post и edit_post 
+        сформирован с правильным контекстом."""
         context = {
             reverse('posts:post_create'),
             reverse('posts:post_edit', kwargs={'post_id': self.post.id})
@@ -186,7 +187,7 @@ class CacheTests(TestCase):
     def test_cache_index(self):
         """Тест кэширования страницы index.html."""
         first_stage = self.authorized_client.get(reverse('posts:index'))
-        post=CacheTests.post
+        post = CacheTests.post
         post.delete()
         second_stage = self.authorized_client.get(reverse('posts:index'))
         self.assertEqual(first_stage.content, second_stage.content)
@@ -231,7 +232,8 @@ class FollowTests(TestCase):
             'posts:profile_follow',
             kwargs={'username': self.user_following.username}))
         follow_exist = Follow.objects.filter(user=self.user_follower,
-                                         author=self.user_following).exists()
+                                             author=self.user_following
+                                              ).exists()
         self.assertTrue(follow_exist)
 
     def test_unfollow(self):
@@ -243,7 +245,8 @@ class FollowTests(TestCase):
             'posts:profile_unfollow',
             kwargs={'username': self.user_following.username}))
         follow_exist = Follow.objects.filter(user=self.user_following,
-                                         author=self.user_follower).exists()
+                                             author=self.user_follower
+                                              ).exists()
         self.assertFalse(follow_exist)
 
     def test_subscription_feed(self):
@@ -259,9 +262,10 @@ class FollowTests(TestCase):
         """Запись не появляется в ленте тех, кто не подписчик."""
         Follow.objects.create(user=self.user_following,
                               author=self.user_following)
-        response = self.client_auth_following.get(reverse('posts:follow_index'))
-        self.assertIn('page_obj', response.context)
+        response = self.client_auth_following.get(
+            reverse('posts:follow_index'))
         post_text = response.context["page_obj"][0].text
+        self.assertIn('page_obj', response.context)
         self.assertNotContains(response,
                                self.post.text)
 
@@ -271,5 +275,5 @@ class FollowTests(TestCase):
             'posts:profile_follow',
             kwargs={'username': self.user.username}))
         follow_exist = Follow.objects.filter(user=self.user,
-                                         author=self.user).exists()
+                                             author=self.user).exists()
         self.assertFalse(follow_exist)

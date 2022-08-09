@@ -64,8 +64,8 @@ class PostsURLTest(TestCase):
         """Авторизированного пользователя со страницы /edit/
          переадресовывает на страницу просмотра поста."""
         response = self.authorized_client.get(reverse('posts:post_edit',
-                                                        kwargs={'post_id':
-                                                                self.post.id}))
+                                                      kwargs={'post_id':
+                                                              self.post.id}))
         self.assertRedirects(response, reverse('posts:post_detail',
                                                kwargs={'post_id':
                                                        self.post.id}))
@@ -121,7 +121,7 @@ class PostsURLTest(TestCase):
         url_create = reverse('posts:post_create')
         url_comments = reverse('posts:add_comment', args=[self.post.id])
         url_follow = reverse('posts:profile_follow',
-                         args=[self.user.username],)
+                             args=[self.user.username],)
         url_redirect = {
             url_posts_edit: f'{url_login}?next={url_posts_edit}',
             url_create: f'{url_login}?next={url_create}',
