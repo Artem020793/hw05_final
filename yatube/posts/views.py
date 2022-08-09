@@ -16,6 +16,7 @@ def get_paginator_obj(request, posts):
     page_obj = paginator.get_page(page_number)
     return page_obj
 
+
 @cache_page(settings.TIME_CACHE)
 def index(request):
     post_list = Post.objects.select_related('author', 'group')

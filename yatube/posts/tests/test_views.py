@@ -60,8 +60,8 @@ class PostPagesTests(TestCase):
     def test_group_list_page_show_correct_context(self):
         """Шаблон group_list сформирован с правильным контекстом."""
         response = self.client.get(reverse('posts:group_list',
-                                                 kwargs={'slug':
-                                                         self.group.slug}))
+                                           kwargs={'slug':
+                                                   self.group.slug}))
         post_obj = response.context['page_obj'][0]
         group_obj = response.context['group']
         self.assertIn('page_obj', response.context)
@@ -93,8 +93,8 @@ class PostPagesTests(TestCase):
     def test_profile_page_show_correct_context(self):
         """Шаблон profile сформирован с правильным контекстом."""
         response = self.client.get(reverse('posts:profile',
-                                                 kwargs={'username':
-                                                         self.user.username}))
+                                           kwargs={'username':
+                                                   self.user.username}))
         self.assertIn('page_obj', response.context)
         test_post = response.context['page_obj'][0]
         self.assertEqual(test_post, self.post)
@@ -200,7 +200,7 @@ class FollowTests(TestCase):
     def setUpTestData(cls):
         super().setUpTestData()
         cls.user = User.objects.create_user(username='user')
-        
+
     def setUp(self):
         self.client_auth_follower = Client()
         self.client_auth_following = Client()

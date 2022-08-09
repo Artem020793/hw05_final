@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.conf import settings
 from django.core.cache import cache
 
-from ..forms import PostForm, CommentForm
+from ..forms import PostForm
 from ..models import Group, Post, Comment
 
 fake = Faker()
@@ -129,11 +129,11 @@ class PostCreateFormTests(TestCase):
         post.refresh_from_db()
         self.assertRedirects(response, redirect)
         self.assertEqual(post.text,
-                     form_data['text'])
+                         form_data['text'])
         self.assertEqual(post.author,
-                     self.test_user)
+                         self.test_user)
         self.assertEqual(post.group,
-                     self.group)
+                         self.group)
 
     def test_create_post_url_redirect_not_author(self):
         """Адрес редактирования поста для авторизованного пользователя,
@@ -177,9 +177,9 @@ class CommentsTests(TestCase):
     def test_pages_comment_available_authorized_client(self):
         """Авторизированному пользователю доступна страница /comment/."""
         response = self.authorized_client.get(reverse('posts:add_comment',
-                                                  args=[self.post.id]))
+                                                      args=[self.post.id]))
         self.assertRedirects(response, reverse('posts:post_detail',
-                                           args=[self.post.id]))
+                                               args=[self.post.id]))
 
     def test_redirects_guest_user_private_page(self):
         """Приватные адреса недоступны для гостевых пользователей
