@@ -232,7 +232,8 @@ class FollowTests(TestCase):
             'posts:profile_follow',
             kwargs={'username': self.user_following.username}))
         follow_exist = Follow.objects.filter(user=self.user_follower,
-                                             author=self.user_following).exists()
+                                             author=self.user_following
+                                             ).exists()
         self.assertTrue(follow_exist)
 
     def test_unfollow(self):
@@ -244,7 +245,8 @@ class FollowTests(TestCase):
             'posts:profile_unfollow',
             kwargs={'username': self.user_following.username}))
         follow_exist = Follow.objects.filter(user=self.user_following,
-                                             author=self.user_follower).exists()
+                                             author=self.user_follower
+                                             ).exists()
         self.assertFalse(follow_exist)
 
     def test_subscription_feed(self):
