@@ -111,7 +111,9 @@ class PostPagesTests(TestCase):
         self.author_client.force_login(self.user)
         context = {
             self.authorized_client: reverse('posts:post_create'),
-            self.author_client: reverse('posts:post_edit', kwargs={'post_id': self.post.id})
+            self.author_client: reverse(
+                'posts:post_edit',
+                kwargs={'post_id': self.post.id})
         }
         for client, revers in context.items():
             with self.subTest(client=client):

@@ -142,7 +142,7 @@ class PostsURLTest(TestCase):
         пользователя."""
         response = self.authorized_client.get(reverse('posts:follow_index'))
         self.assertEqual(response.status_code, HTTPStatus.OK)
-        
+
     def test_urls_uses_correct_template_unauthorized(self):
         """URL-адрес использует соответствующий шаблон."""
         response = self.authorized_client.get(reverse('posts:follow_index'))

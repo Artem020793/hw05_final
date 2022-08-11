@@ -148,7 +148,9 @@ class PostCreateFormTests(TestCase):
         response = self.authorized_client.post(
             reverse(
                 'posts:post_edit', args=(
-                    PostCreateFormTests.post.id,)), data = form_data, follow=True
+                PostCreateFormTests.post.id,)),
+            data = form_data,
+            follow=True
         )
         redirect_address = reverse(
             'posts:post_detail', args=(PostCreateFormTests.post.id,)
