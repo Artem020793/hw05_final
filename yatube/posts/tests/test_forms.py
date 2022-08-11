@@ -146,9 +146,8 @@ class PostCreateFormTests(TestCase):
             'group': self.group.id,
         }
         response = self.authorized_client.post(
-            reverse(
-                'posts:post_edit', args=(
-                PostCreateFormTests.post.id,)),
+            reverse('posts:post_edit',
+            args=(PostCreateFormTests.post.id,)),
             data = form_data,
             follow=True
         )
