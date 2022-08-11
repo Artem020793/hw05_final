@@ -6,7 +6,7 @@ from django.shortcuts import render
 def page_not_found(request, exception):
     return render(
         request, 'core/404.html',
-        {"request": request}, status=HTTPStatus.NOT_FOUND)
+        status=HTTPStatus.NOT_FOUND)
 
 
 def server_error(request):

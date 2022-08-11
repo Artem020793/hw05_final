@@ -29,12 +29,15 @@ class Post(models.Model):
         help_text='Введите текст поста'
     )
     pub_date = models.DateTimeField(
+        'Дата публикации',
         auto_now_add=True,
+        db_index=True
     )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='posts',
+        verbose_name='Автор'
     )
     group = models.ForeignKey(
         Group,
@@ -42,6 +45,8 @@ class Post(models.Model):
         blank=True,
         null=True,
         related_name='posts',
+        verbose_name='Группа',
+        help_text='Выберете группу'
     )
     image = models.ImageField(
         'Картинка',

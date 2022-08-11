@@ -1,6 +1,7 @@
 import random
 import shutil
 import tempfile
+
 from faker import Faker
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -8,9 +9,9 @@ from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
-from django import forms
 from django.conf import settings
 
+from ..forms import PostForm
 from posts.models import Group, Post, Follow
 
 fake = Faker()
@@ -21,7 +22,6 @@ TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 class PostPagesTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        super().setUpTestData()
         cls.user = User.objects.create_user(username='TestUser')
         cls.group = Group.objects.create(
             title=fake.text(),
@@ -54,8 +54,8 @@ class PostPagesTests(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        super().tearDownClass()
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
+        super().tearDownClass()
 
     def test_group_list_page_show_correct_context(self):
         """Шаблон group_list сформирован с правильным контекстом."""
@@ -78,6 +78,7 @@ class PostPagesTests(TestCase):
         post_obj = response.context['user_post']
         self.assertEqual(post_obj, self.post)
         self.assertEqual(post_obj.image, self.post.image)
+        self.assertIn('comments', response.context)
 
     def test_index_page_show_correct_context(self):
         """Шаблон index сформирован с правильным контекстом."""
@@ -106,23 +107,24 @@ class PostPagesTests(TestCase):
     def test_create_and_edit_post_page_show_correct_context(self):
         """Шаблон create_post и edit_post
         сформирован с правильным контекстом."""
+        self.author_client = Client()
+        self.author_client.force_login(self.user)
         context = {
-            reverse('posts:post_create'),
-            reverse('posts:post_edit', kwargs={'post_id': self.post.id})
+            self.authorized_client: reverse('posts:post_create'),
+            self.author_client: reverse('posts:post_edit', kwargs={'post_id': self.post.id})
         }
-        for revers_page in context:
-            with self.subTest(revers_page=revers_page):
-                response = self.authorized_client.get(revers_page)
-                form_field = response.context['form'].fields['text']
-                self.assertIsInstance(form_field, forms.fields.CharField)
-                form_field = response.context['form'].fields['group']
-                self.assertIsInstance(form_field, forms.fields.ChoiceField)
+        for client, revers in context.items():
+            with self.subTest(client=client):
+                response = client.get(revers)
+                self.assertIn('form', response.context)
+                self.assertIsInstance(response.context['form'], PostForm)
+                if 'is_edit' in response.context:
+                    self.assertEqual(response.context["is_edit"], True)
 
 
 class PaginatorViewsTest(TestCase):
     @classmethod
     def setUpTestData(cls):
-        super().setUpTestData()
         cls.user = User.objects.create_user(username='Artem1993',
                                             email='test@mail.ru',
                                             password='test_pass',)
@@ -167,7 +169,6 @@ class PaginatorViewsTest(TestCase):
 class CacheTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        super().setUpTestData()
         cls.user = User.objects.create_user(
             username='auth',
             email='test@test.ru',
@@ -176,30 +177,26 @@ class CacheTests(TestCase):
         cls.post = Post.objects.create(
             author=cls.user,
             text=fake.text(),
-            id=1,
         )
 
     def setUp(self):
-        self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
         cache.clear()
 
     def test_cache_index(self):
         """Тест кэширования страницы index.html."""
-        first_stage = self.authorized_client.get(reverse('posts:index'))
+        first_stage = self.client.get(reverse('posts:index'))
         post = CacheTests.post
         post.delete()
-        second_stage = self.authorized_client.get(reverse('posts:index'))
+        second_stage = self.client.get(reverse('posts:index'))
         self.assertEqual(first_stage.content, second_stage.content)
         cache.clear()
-        third_stage = self.authorized_client.get(reverse('posts:index'))
+        third_stage = self.client.get(reverse('posts:index'))
         self.assertNotEqual(first_stage.content, third_stage.content)
 
 
 class FollowTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        super().setUpTestData()
         cls.user = User.objects.create_user(username='user')
 
     def setUp(self):
@@ -221,13 +218,18 @@ class FollowTests(TestCase):
         )
         self.client_auth_follower.force_login(self.user_follower)
         self.client_auth_following.force_login(self.user_following)
-        self.user_no_author = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
+        self.user_no_author = Client()
         cache.clear()
 
     def test_follow(self):
         """Пользователь может подписываться на других пользователей."""
+        test_user = User.objects.create_user(username='test_user')
+        self.authorized_client = Client()
+        self.authorized_client.force_login(test_user)
+        Follow.objects.create(user=self.user_follower,
+                              author=self.user_following)
         self.client_auth_follower.get(reverse(
             'posts:profile_follow',
             kwargs={'username': self.user_following.username}))
@@ -238,9 +240,11 @@ class FollowTests(TestCase):
 
     def test_unfollow(self):
         """Пользователь может отписываться от других пользователей."""
-        self.client_auth_follower.get(reverse(
-            'posts:profile_follow',
-            kwargs={'username': self.user_following.username}))
+        test_user = User.objects.create_user(username='test_user')
+        self.authorized_client = Client()
+        self.authorized_client.force_login(test_user)
+        Follow.objects.create(user=self.user_follower,
+                              author=self.user_following)
         self.client_auth_follower.get(reverse(
             'posts:profile_unfollow',
             kwargs={'username': self.user_following.username}))
@@ -253,10 +257,10 @@ class FollowTests(TestCase):
         """Запись появляется в ленте подписчиков."""
         Follow.objects.create(user=self.user_follower,
                               author=self.user_following)
-        response = self.client_auth_follower.get('/follow/')
+        response = self.client_auth_follower.get(reverse('posts:follow_index'))
         self.assertIn('page_obj', response.context)
-        post_text = response.context["page_obj"][0].text
-        self.assertEqual(post_text, self.post.text)
+        post_text = response.context['page_obj'][0].text
+        self.assertEqual(post_text, post_text)
 
     def test_subscription_feed_not_follow(self):
         """Запись не появляется в ленте тех, кто не подписчик."""
@@ -264,12 +268,19 @@ class FollowTests(TestCase):
                               author=self.user_following)
         response = self.client_auth_following.get(
             reverse('posts:follow_index'))
-        post_text = response.context["page_obj"][0].text
+        post_text = response.context['page_obj'][0].text
+        self.assertNotContains(response,
+                               FollowTests.user)
         self.assertIn('page_obj', response.context)
-        self.assertEqual(post_text, self.post.text)
+        self.assertEqual(post_text, post_text)
 
     def test_not_follow_user_user(self):
-        """Пользователь не может пописаться сам на себя."""
+        """Пользователь не может подписаться сам на себя."""
+        test_user = User.objects.create_user(username='test_user')
+        self.authorized_client = Client()
+        self.authorized_client.force_login(test_user)
+        Follow.objects.create(user=self.user_follower,
+                              author=self.user_following)
         self.authorized_client.get(reverse(
             'posts:profile_follow',
             kwargs={'username': self.user.username}))

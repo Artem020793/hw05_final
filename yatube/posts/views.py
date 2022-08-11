@@ -40,7 +40,7 @@ def group_posts(request, slug):
 
 def profile(request, username):
     author = get_object_or_404(User, username=username)
-    post_list = author.posts.select_related('author', 'group')
+    post_list = author.posts.select_related('group')
     page_obj = get_paginator_obj(request, post_list)
     following = request.user.is_authenticated and (
         Follow.objects.filter(

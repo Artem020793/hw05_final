@@ -17,6 +17,9 @@ class PostsURLTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(username='Artem1993')
+        cls.user_no_author = User.objects.create_user(
+            username=fake.user_name()
+        )
         cls.group = Group.objects.create(
             title=fake.text(),
             slug='group-slug',
@@ -29,36 +32,37 @@ class PostsURLTest(TestCase):
         )
 
     def setUp(self):
-        self.user_no_author = User.objects.create_user(
-            username=fake.user_name()
-        )
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user_no_author)
         cache.clear()
 
     def test_urls_status_guest(self):
         """Проверка статуса на странице для гостя."""
-        templates_status_chek = {
-            reverse('posts:index'): HTTPStatus.OK,
+        templates_status_chek = (
+            reverse('posts:index'),
             reverse('posts:group_list', kwargs={'slug':
-                                                self.group.slug}):
-                                                    HTTPStatus.OK,
+                                                self.group.slug}),
             reverse('posts:profile', kwargs={'username':
-                                             self.user.username}):
-                                                 HTTPStatus.OK,
+                                             self.user.username}),
             reverse('posts:post_detail', kwargs={'post_id':
-                                                 self.post.id}):
-                                                    HTTPStatus.OK,
-        }
-        for url, status in templates_status_chek.items():
+                                                 self.post.id}),
+        )
+        for url in templates_status_chek:
             with self.subTest(url=url):
                 response = self.client.get(url)
-                self.assertEqual(response.status_code, status)
+                self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_pages_available_authorized_client(self):
         """Авторизированному пользователю доступна страница /create/."""
         response = self.authorized_client.get(reverse('posts:post_create'))
         self.assertEqual(response.status_code, HTTPStatus.OK)
+
+    def test_pages_comment_available_authorized_client(self):
+        """Авторизированному пользователю доступна страница /comment/."""
+        response = self.authorized_client.get(reverse('posts:add_comment',
+                                                      args=[self.post.id]))
+        self.assertRedirects(response, reverse('posts:post_detail',
+                                               args=[self.post.id]))
 
     def test_redirect_authorized_client_page_edit(self):
         """Авторизированного пользователя со страницы /edit/
@@ -132,3 +136,14 @@ class PostsURLTest(TestCase):
             with self.subTest(url=url):
                 response = self.client.get(url, follow=True)
                 self.assertRedirects(response, redirect)
+
+    def test_follow_url_authorized(self):
+        """Проверка доступа для авторизованного
+        пользователя."""
+        response = self.authorized_client.get(reverse('posts:follow_index'))
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        
+    def test_urls_uses_correct_template_unauthorized(self):
+        """URL-адрес использует соответствующий шаблон."""
+        response = self.authorized_client.get(reverse('posts:follow_index'))
+        self.assertTemplateUsed(response, 'posts/follow.html')

@@ -1,5 +1,7 @@
 import shutil
 import tempfile
+
+from http import HTTPStatus
 from faker import Faker
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -139,10 +141,14 @@ class PostCreateFormTests(TestCase):
         """Адрес редактирования поста для авторизованного пользователя,
         не являющегося автором, ведет на редиректную страницу."""
         self.authorized_client.force_login(PostCreateFormTests.user2)
-        response = self.authorized_client.get(
+        form_data = {
+            'text': fake.text(),
+            'group': self.group.id,
+        }
+        response = self.authorized_client.post(
             reverse(
                 'posts:post_edit', args=(
-                    PostCreateFormTests.post.id,)), follow=True
+                    PostCreateFormTests.post.id,)), data = form_data, follow=True
         )
         redirect_address = reverse(
             'posts:post_detail', args=(PostCreateFormTests.post.id,)
@@ -174,32 +180,8 @@ class CommentsTests(TestCase):
         self.authorized_client.force_login(CommentsTests.user)
         cache.clear()
 
-    def test_pages_comment_available_authorized_client(self):
-        """Авторизированному пользователю доступна страница /comment/."""
-        response = self.authorized_client.get(reverse('posts:add_comment',
-                                                      args=[self.post.id]))
-        self.assertRedirects(response, reverse('posts:post_detail',
-                                               args=[self.post.id]))
-
-    def test_redirects_guest_user_private_page(self):
-        """Приватные адреса недоступны для гостевых пользователей
-        и работает переадресация на страницу входа."""
-        url_posts_edit = reverse('posts:post_edit', args=[self.post.id])
-        url_login = reverse('users:login')
-        url_create = reverse('posts:post_create')
-        url_comments = reverse('posts:add_comment', args=[self.post.id])
-        url_redirect = {
-            url_posts_edit: f'{url_login}?next={url_posts_edit}',
-            url_create: f'{url_login}?next={url_create}',
-            url_comments: f'{url_login}?next={url_comments}'
-        }
-        for url, redirect in url_redirect.items():
-            with self.subTest(url=url):
-                response = self.client.get(url, follow=True)
-                self.assertRedirects(response, redirect)
-
     def test_add_comments(self):
-        """Тест добавления Comments если форма Валидная"""
+        """Тест добавления Comments если форма Валидная."""
         comments_count = Comment.objects.count()
         form_data = {
             'text': fake.text(),
@@ -209,13 +191,19 @@ class CommentsTests(TestCase):
             data=form_data,
             follow=True
         )
-        response_post = self.client.get(
-            reverse('posts:post_detail', kwargs={'post_id': self.post.id})
-        )
-        self.assertIn('comments', response_post.context)
+        comment = Comment.objects.latest('created')
         self.assertEqual(Comment.objects.count(), comments_count + 1)
         self.assertTrue(
             Comment.objects.filter(text=form_data['text']).exists())
         self.assertRedirects(response, reverse(
             'posts:post_detail',
             kwargs={'post_id': self.post.id}))
+        self.assertEqual(form_data['text'], comment.text)
+        self.assertEqual(self.user, comment.author)
+        self.assertEqual(self.post.id, comment.post.id)
+
+    def test_create_comment_authorized(self):
+        """Комментировать может только авторизованный пользователь."""
+        response = self.authorized_client.get(reverse('posts:add_comment',
+                                              args=[self.post.id]))
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
