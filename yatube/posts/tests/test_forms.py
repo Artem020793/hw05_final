@@ -201,10 +201,8 @@ class CommentsTests(TestCase):
             'text': fake.text(),
         }
         response = self.client.post(
-            reverse(
-                 'posts:add_comment', args=(
-                    self.post.id,)
-            ), data=comment_data, follow=True
+            reverse('posts:add_comment', args=(self.post.id,)),
+            data=comment_data, follow=True
         )
         redirect_address = reverse(
             'users:login') + '?next=' + reverse(
