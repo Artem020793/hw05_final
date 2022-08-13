@@ -34,8 +34,8 @@ class PostsURLTest(TestCase):
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user_no_author)
-        self.author_client = Client() 
-        self.author_client.force_login(self.user) 
+        self.author_client = Client()
+        self.author_client.force_login(self.user)
         cache.clear()
 
     def test_urls_status_guest(self):

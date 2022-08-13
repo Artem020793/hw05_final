@@ -8,7 +8,6 @@ from django.contrib.auth import get_user_model
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.conf import settings
-from django.core.cache import cache
 
 from ..models import Group, Post, Comment
 
@@ -195,7 +194,7 @@ class CommentsTests(TestCase):
         self.assertEqual(self.post, comment.post)
 
     def test_add_comment_by_not_authorized_client(self):
-        """Неавторизованный клиент не может создать 
+        """Неавторизованный клиент не может создать
         комментарий и перенаправляется на страницу авторизации."""
         comments_count = Comment.objects.count()
         comment_data = {
@@ -204,11 +203,11 @@ class CommentsTests(TestCase):
         response = self.client.post(
             reverse(
                  'posts:add_comment', args=(
-                     self.post.id,)
+                    self.post.id,)
             ), data=comment_data, follow=True
         )
         redirect_address = reverse(
-          'users:login') + '?next=' + reverse(
-              'posts:add_comment', args=(self.post.id,))
+            'users:login') + '?next=' + reverse(
+            'posts:add_comment', args=(self.post.id,))
         self.assertRedirects(response, redirect_address)
         self.assertEqual(Comment.objects.count(), comments_count)
