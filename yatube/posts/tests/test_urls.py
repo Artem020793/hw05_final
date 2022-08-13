@@ -34,18 +34,17 @@ class PostsURLTest(TestCase):
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user_no_author)
+        self.author_client = Client() 
+        self.author_client.force_login(self.user) 
         cache.clear()
 
     def test_urls_status_guest(self):
         """Проверка статуса на странице для гостя."""
         templates_status_chek = (
             reverse('posts:index'),
-            reverse('posts:group_list', kwargs={'slug':
-                                                self.group.slug}),
-            reverse('posts:profile', kwargs={'username':
-                                             self.user.username}),
-            reverse('posts:post_detail', kwargs={'post_id':
-                                                 self.post.id}),
+            reverse('posts:group_list', args=(self.group.slug,)),
+            reverse('posts:profile', args=(self.user.username,)),
+            reverse('posts:post_detail', args=(self.post.id,)),
         )
         for url in templates_status_chek:
             with self.subTest(url=url):
@@ -68,24 +67,18 @@ class PostsURLTest(TestCase):
         """Авторизированного пользователя со страницы /edit/
          переадресовывает на страницу просмотра поста."""
         response = self.authorized_client.get(reverse('posts:post_edit',
-                                                      kwargs={'post_id':
-                                                              self.post.id}))
+                                                      args=(self.post.id,)))
         self.assertRedirects(response, reverse('posts:post_detail',
-                                               kwargs={'post_id':
-                                                       self.post.id}))
+                                               args=(self.post.id,)))
 
     def test_pages_available_edit_author(self):
         """Автору поста доступна страница /edit/."""
-        self.author_client = Client()
-        self.author_client.force_login(self.user)
         response = self.author_client.get(reverse('posts:post_edit',
                                                   args=(self.post.id,)))
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_edit_pages_template(self):
         """Страница edit используют соответствующий шаблон."""
-        self.author_client = Client()
-        self.author_client.force_login(self.user)
         response = self.author_client.get(reverse('posts:post_edit',
                                                   args=(self.post.id,)))
         self.assertTemplateUsed(response, 'posts/create_post.html')
@@ -106,11 +99,11 @@ class PostsURLTest(TestCase):
         url_template = {
             reverse('posts:index'): 'posts/index.html',
             reverse('posts:group_list',
-                    args=[self.group.slug]): 'posts/group_list.html',
+                    args=(self.group.slug,)): 'posts/group_list.html',
             reverse('posts:profile',
-                    args=[self.user]): 'posts/profile.html',
+                    args=(self.user,)): 'posts/profile.html',
             reverse('posts:post_detail',
-                    args=[self.post.id]): 'posts/post_detail.html',
+                    args=(self.post.id,)): 'posts/post_detail.html',
         }
         for url, template in url_template.items():
             with self.subTest(template=template):
@@ -120,10 +113,10 @@ class PostsURLTest(TestCase):
     def test_redirects_guest_user_private_page(self):
         """Приватные адреса недоступны для гостевых пользователей
          и работает переадресация на страницу входа."""
-        url_posts_edit = reverse('posts:post_edit', args=[self.post.id])
+        url_posts_edit = reverse('posts:post_edit', args=(self.post.id,))
         url_login = reverse('users:login')
         url_create = reverse('posts:post_create')
-        url_comments = reverse('posts:add_comment', args=[self.post.id])
+        url_comments = reverse('posts:add_comment', args=(self.post.id,))
         url_follow = reverse('posts:profile_follow',
                              args=[self.user.username],)
         url_redirect = {

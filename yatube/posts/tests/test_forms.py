@@ -1,7 +1,6 @@
 import shutil
 import tempfile
 
-from http import HTTPStatus
 from faker import Faker
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -11,7 +10,6 @@ from django.urls import reverse
 from django.conf import settings
 from django.core.cache import cache
 
-from ..forms import PostForm
 from ..models import Group, Post, Comment
 
 fake = Faker()
@@ -36,22 +34,18 @@ class PostCreateFormTests(TestCase):
             author=cls.test_user,
             group=cls.group,
         )
-        cls.form = PostForm()
 
     @classmethod
     def tearDownClass(cls):
-        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
         super().tearDownClass()
 
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.test_user)
-        self.authorized_client_2 = Client()
-        self.authorized_client_2.force_login(self.user2)
-        cache.clear()
 
     def test_post(self):
         """Тестирование создания Post"""
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
         post_count = Post.objects.count()
         small_gif = (
             b'\x47\x49\x46\x38\x39\x61\x02\x00'
@@ -78,7 +72,7 @@ class PostCreateFormTests(TestCase):
         )
         new_post = Post.objects.first()
         self.assertRedirects(response, reverse(
-            'posts:profile', kwargs={'username': new_post.author}))
+            'posts:profile', args=(new_post.author,)))
         self.assertEqual(Post.objects.count(), post_count + 1)
         self.assertTrue(
             Post.objects.filter(
@@ -121,13 +115,13 @@ class PostCreateFormTests(TestCase):
         }
         posts_count = Post.objects.count()
         response = self.authorized_client.post(
-            reverse('posts:post_edit', kwargs={'post_id': post.id}),
+            reverse('posts:post_edit', args=(post.id,)),
             data=form_data,
         )
         self.assertEqual(Post.objects.count(), posts_count)
         redirect = reverse(
             'posts:post_detail',
-            kwargs={'post_id': post.id})
+            args=(post.id,))
         post.refresh_from_db()
         self.assertRedirects(response, redirect)
         self.assertEqual(post.text,
@@ -179,7 +173,6 @@ class CommentsTests(TestCase):
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(CommentsTests.user)
-        cache.clear()
 
     def test_add_comments(self):
         """Тест добавления Comments если форма Валидная."""
@@ -188,23 +181,34 @@ class CommentsTests(TestCase):
             'text': fake.text(),
         }
         response = self.authorized_client.post(
-            reverse('posts:add_comment', kwargs={'post_id': self.post.id}),
+            reverse('posts:add_comment', args=(self.post.id,)),
             data=form_data,
             follow=True
         )
         comment = Comment.objects.latest('created')
         self.assertEqual(Comment.objects.count(), comments_count + 1)
-        self.assertTrue(
-            Comment.objects.filter(text=form_data['text']).exists())
         self.assertRedirects(response, reverse(
             'posts:post_detail',
-            kwargs={'post_id': self.post.id}))
+            args=(self.post.id,)))
         self.assertEqual(form_data['text'], comment.text)
         self.assertEqual(self.user, comment.author)
-        self.assertEqual(self.post.id, comment.post.id)
+        self.assertEqual(self.post, comment.post)
 
-    def test_create_comment_authorized(self):
-        """Комментировать может только авторизованный пользователь."""
-        response = self.authorized_client.get(reverse('posts:add_comment',
-                                              args=[self.post.id]))
-        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+    def test_add_comment_by_not_authorized_client(self):
+        """Неавторизованный клиент не может создать 
+        комментарий и перенаправляется на страницу авторизации."""
+        comments_count = Comment.objects.count()
+        comment_data = {
+            'text': fake.text(),
+        }
+        response = self.client.post(
+            reverse(
+                 'posts:add_comment', args=(
+                     self.post.id,)
+            ), data=comment_data, follow=True
+        )
+        redirect_address = reverse(
+          'users:login') + '?next=' + reverse(
+              'posts:add_comment', args=(self.post.id,))
+        self.assertRedirects(response, redirect_address)
+        self.assertEqual(Comment.objects.count(), comments_count)
