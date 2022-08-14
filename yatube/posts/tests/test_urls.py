@@ -59,9 +59,9 @@ class PostsURLTest(TestCase):
     def test_pages_comment_available_authorized_client(self):
         """Авторизированному пользователю доступна страница /comment/."""
         response = self.authorized_client.get(reverse('posts:add_comment',
-                                                      args=[self.post.id]))
+                                                      args=(self.post.id,)))
         self.assertRedirects(response, reverse('posts:post_detail',
-                                               args=[self.post.id]))
+                                               args=(self.post.id,)))
 
     def test_redirect_authorized_client_page_edit(self):
         """Авторизированного пользователя со страницы /edit/

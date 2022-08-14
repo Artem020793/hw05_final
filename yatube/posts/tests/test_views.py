@@ -200,24 +200,11 @@ class FollowTests(TestCase):
         cls.user = User.objects.create_user(username='user')
 
     def setUp(self):
-        self.client_auth_follower = Client()
-        self.client_auth_following = Client()
         self.user_follower = User.objects.create_user(
             username=fake.user_name(),
             email='follower@mail.ru',
             password=fake.password()
         )
-        self.user_following = User.objects.create_user(
-            username='following',
-            email='following@mail.ru',
-            password='test'
-        )
-        self.post = Post.objects.create(
-            author=self.user_following,
-            text=fake.text()
-        )
-        self.client_auth_follower.force_login(self.user_follower)
-        self.client_auth_following.force_login(self.user_following)
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
         cache.clear()
@@ -225,46 +212,49 @@ class FollowTests(TestCase):
     def test_follow(self):
         """Пользователь может подписываться на других пользователей."""
         author_user = User.objects.create_user(username='author_user')
-        self.client_auth_follower.get(reverse(
+        self.authorized_client.get(reverse(
             'posts:profile_follow',
             args=(author_user.username,)))
-        follow_exist = Follow.objects.filter(user=self.user_follower,
+        follow_exist = Follow.objects.filter(user=self.user,
                                              author=author_user
                                              ).exists()
         self.assertTrue(follow_exist)
 
     def test_unfollow(self):
         """Пользователь может отписываться от других пользователей."""
-        Follow.objects.create(user=self.user_follower,
-                              author=self.user_following)
-        self.client_auth_follower.get(reverse(
+        author_user = User.objects.create_user(username='author_user')
+        Follow.objects.create(user=self.user,
+                              author=author_user)
+        self.authorized_client.get(reverse(
             'posts:profile_unfollow',
-            args=(self.user_following.username,)))
-        follow_exist = Follow.objects.filter(user=self.user_following,
-                                             author=self.user_follower
+            args=(author_user.username,)))
+        follow_exist = Follow.objects.filter(user=self.user,
+                                             author=author_user
                                              ).exists()
         self.assertFalse(follow_exist)
 
     def test_check_posts_in_follow_index(self):
         """Посты избранных авторов выводятся в follow_index."""
+        author_user = User.objects.create_user(username='author_user')
         post = Post.objects.create(
             text='текстовый пост для проверки follow_index',
-            author=self.user_following
+            author=author_user
         )
         Follow.objects.create(
-            user=self.user_follower,
-            author=self.user_following
+            user=self.user,
+            author=author_user
         )
-        response = self.client_auth_follower.get(reverse('posts:follow_index'))
+        response = self.authorized_client.get(reverse('posts:follow_index'))
         self.assertIn(post, response.context['page_obj'])
 
     def test_check_posts_not_in_follow(self):
         """Посты не избранных авторов не выводятся в follow_index."""
+        author_user = User.objects.create_user(username='author_user')
         post = Post.objects.create(
             text='текстовый пост для проверки follow_index',
-            author=self.user_following
+            author=author_user
         )
-        response = self.client_auth_following.get(
+        response = self.authorized_client.get(
             reverse('posts:follow_index'))
         self.assertNotIn(post, response.context['page_obj'])
 
