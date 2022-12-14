@@ -10,6 +10,8 @@ SECRET_KEY = 'wz=ex_g*5u832*nhxpcqa6^+as59aam5ruwfc1y_$8h4=7kxn4'
 DEBUG = True
 
 ALLOWED_HOSTS = [
+    'www.Artem02071993.pythonanywhere.com',
+    'Artem02071993.pythonanywhere.com',
     'localhost',
     '127.0.0.1',
     '[::1]',
@@ -29,6 +31,7 @@ INSTALLED_APPS = [
     'core.apps.CoreConfig',
     'about.apps.AboutConfig',
     'sorl.thumbnail',
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
@@ -39,6 +42,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 ROOT_URLCONF = 'yatube.urls'
@@ -124,3 +128,7 @@ CACHES = {
 }
 
 TIME_CACHE = 20
+
+INTERNAL_IPS = [
+    '127.0.0.1',
+]
